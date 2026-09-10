@@ -422,6 +422,23 @@ layui.use(['tree', 'table','form','dropdown','util'], function(){
           });
       })
 
+      //照片批量上传按钮
+      $("#btn_main_photos").on("click",function(){
+          layer.open({
+              title: "照片上传",
+              type: 2,
+              area: areaBig,
+              content: 'photos.html?f='+currPath+"/",
+              cancel: function () {
+                tableRender(currPath);
+              },
+              end: function () {
+                //照片页上传完成后会主动关闭本弹层，此处统一刷新列表
+                tableRender(currPath);
+              }
+          });
+      })
+
       //添加按钮
       $(".btn_main_new").click(function(){
         //if(currPath!="/"){currPath=currPath+"/";}
@@ -476,6 +493,7 @@ layui.use(['tree', 'table','form','dropdown','util'], function(){
       //ro权限隐藏rw菜单
       if(token && auth=="ro"){
         $(".btn_main_new").hide();
+        $("#btn_main_photos").hide();
         $("#btn_main_upload").hide();
         $("#btn_left_dir").hide();
         $("#btn_left_open").hide(); 

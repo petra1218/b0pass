@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="utf-8">
+  <title>照片上传</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link rel="stylesheet" href="assets/lib/layui/css/layui.css">
+  <style>
+    :root{
+      --ph-primary:#226EF1;
+      --ph-primary-dark:#1E60D4;
+      --ph-success:#16B777;
+      --ph-danger:#FF5722;
+      --ph-warn:#FFB800;
+      --ph-bg:#F8F8F8;
+      --ph-text:#333333;
+      --ph-text-sub:#666666;
+      --ph-line:#EDEDED;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    html,body{margin:0;padding:0;min-height:100%;}
+    body{
+      font-family:"PingFang SC","Helvetica Neue",Helvetica,Arial,"Microsoft YaHei",sans-serif;
+      font-size:14px;color:var(--ph-text);background:var(--ph-bg);
+      padding-bottom:118px;
+    }
+
+    /* 顶部目录条 */
+    .ph-head{
+      position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:8px;
+      padding:10px 12px;background:#fff;border-bottom:1px solid var(--ph-line);
+      box-shadow:0 1px 6px rgba(0,0,0,.04);
+    }
+    .ph-head-path{
+      flex:1;min-width:0;font-size:13px;color:var(--ph-text-sub);
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+    .ph-head-path b{color:var(--ph-primary);font-weight:600;}
+    .ph-close{
+      flex:none;width:28px;height:28px;line-height:26px;text-align:center;border:0;border-radius:50%;
+      background:#F1F3F5;color:var(--ph-text-sub);font-size:16px;cursor:pointer;
+    }
+    .ph-close:active{background:#E4E7EB;}
+
+    /* 常亮提示 */
+    .ph-tip{
+      display:flex;align-items:center;gap:6px;margin:8px 12px 0;padding:8px 10px;border-radius:8px;
+      background:#FFF8E6;color:#8A6100;font-size:12px;line-height:1.5;border:1px solid #FFE9B0;
+    }
+    .ph-tip.hide{display:none;}
+
+    /* 缩略图网格 */
+    .ph-grid{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px 4px;
+    }
+    @media (min-width:600px){
+      .ph-grid{grid-template-columns:repeat(6,1fr);gap:8px;padding:12px 16px 4px;}
+    }
+    .ph-cell{
+      position:relative;padding-top:100%;border-radius:8px;overflow:hidden;background:#E9ECEF;
+      animation:ph-in .22s ease both;
+    }
+    @keyframes ph-in{from{opacity:0;transform:scale(.94);}to{opacity:1;transform:scale(1);}}
+    .ph-cell img{
+      position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;display:block;
+    }
+    .ph-cell.is-done{outline:2px solid var(--ph-success);outline-offset:-2px;}
+    .ph-cell.is-fail{outline:2px solid var(--ph-danger);outline-offset:-2px;}
+    .ph-state{
+      position:absolute;left:4px;bottom:4px;max-width:calc(100% - 30px);
+      padding:1px 6px;border-radius:10px;font-size:11px;line-height:16px;color:#fff;
+      background:rgba(0,0,0,.55);backdrop-filter:blur(2px);
+    }
+    .ph-state-doing{background:var(--ph-primary);}
+    .ph-state-done{background:var(--ph-success);}
+    .ph-state-fail{background:var(--ph-danger);}
+    .ph-del{
+      position:absolute;right:3px;top:3px;width:20px;height:20px;line-height:18px;text-align:center;
+      border:0;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-size:13px;cursor:pointer;
+    }
+    .ph-del:active{background:rgba(0,0,0,.75);}
+    .ph-cell.is-doing .ph-del{display:none;}
+
+    /* 空状态 */
+    .ph-empty{padding:64px 24px;text-align:center;color:#9AA1A9;font-size:13px;line-height:2;}
+    .ph-empty .ph-empty-ico{font-size:44px;color:#D7DCE2;display:block;margin-bottom:8px;}
+    .ph-empty.hide{display:none;}
+
+    /* 底部操作栏 */
+    .ph-bar{
+      position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--ph-line);
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      box-shadow:0 -2px 12px rgba(0,0,0,.07);
+    }
+    .ph-bar-info{font-size:12px;color:var(--ph-text-sub);margin-bottom:8px;min-height:16px;}
+    .ph-bar-info b{color:var(--ph-text);font-weight:600;}
+    .ph-bar-info .ph-ok{color:var(--ph-success);}
+    .ph-bar-info .ph-err{color:var(--ph-danger);}
+    .ph-progress{height:6px;border-radius:3px;background:#EEF1F4;overflow:hidden;margin-bottom:10px;}
+    .ph-progress.hide{display:none;}
+    .ph-progress i{
+      display:block;height:100%;width:0;border-radius:3px;
+      background:linear-gradient(90deg,var(--ph-primary),var(--ph-success));
+      transition:width .15s linear;
+    }
+    .ph-btns{display:flex;gap:8px;}
+    .ph-btns .layui-btn{flex:1;margin:0;height:40px;line-height:40px;border-radius:8px;font-size:14px;}
+    .ph-btns .layui-btn.hide{display:none;}
+
+    /* 隐藏的文件输入（避免部分安卓浏览器 display:none 无法触发） */
+    .ph-file{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;overflow:hidden;}
+
+    /* 微信遮罩 */
+    .ph-mask{
+      position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.72);
+      display:flex;align-items:center;justify-content:center;padding:24px;
+    }
+    .ph-mask.hide{display:none;}
+    .ph-mask-card{
+      max-width:320px;background:#fff;border-radius:14px;padding:20px 18px;text-align:center;line-height:1.8;
+    }
+    .ph-mask-card h3{margin:0 0 10px;font-size:16px;color:var(--ph-text);}
+    .ph-mask-card p{margin:0 0 6px;font-size:13px;color:var(--ph-text-sub);}
+    .ph-mask-card .layui-btn{margin-top:12px;border-radius:8px;}
+    .ph-arrow{font-size:28px;color:var(--ph-warn);line-height:1;}
+  </style>
+</head>
+<body>
+
+  <div class="ph-head">
+    <div class="ph-head-path">上传到 <b id="f">/</b> 目录</div>
+    <button type="button" class="ph-close" id="btnClose" title="关闭">×</button>
+  </div>
+
+  <div class="ph-tip hide" id="keepAwakeTip">
+    <span>⏳</span><span>正在上传，请保持屏幕常亮、勿切换后台</span>
+  </div>
+
+  <div class="ph-empty" id="empty">
+    <span class="ph-empty-ico">🖼</span>
+    点击下方「选择照片」，可一次从相册选中多张<br>建议单次不超过 300 张，避免手机相册卡顿
+  </div>
+
+  <div class="ph-grid" id="grid"></div>
+
+  <div class="ph-bar">
+    <div class="ph-bar-info" id="barInfo">未选择照片</div>
+    <div class="ph-progress hide" id="barProgress"><i id="barProgressInner"></i></div>
+    <div class="ph-btns">
+      <button type="button" class="layui-btn layui-btn-normal" id="btnSelect">选择照片</button>
+      <button type="button" class="layui-btn layui-btn-primary hide" id="btnRetry">重试失败项</button>
+      <button type="button" class="layui-btn layui-btn-warm hide" id="btnStart">开始上传</button>
+    </div>
+  </div>
+
+  <input type="file" class="ph-file" id="fileInput" accept="image/*" multiple>
+  <audio id="noSleepAudio" loop preload="auto" hidden></audio>
+
+  <div class="ph-mask hide" id="wxTip">
+    <div class="ph-mask-card">
+      <div class="ph-arrow">↗</div>
+      <h3>请用系统浏览器打开</h3>
+      <p>微信内置浏览器不支持一次选择多张照片。</p>
+      <p>请点击右上角 <b>···</b> → <b>在浏览器打开</b>，</p>
+      <p>再重新进入本页即可批量上传。</p>
+      <button type="button" class="layui-btn layui-btn-normal" id="btnWxKnow">我知道了</button>
+    </div>
+  </div>
+
+  <script src="assets/lib/layui/layui.js"></script>
+  <script src="assets/js/photos.js?v2.07"></script>
+
+</body>
+</html>

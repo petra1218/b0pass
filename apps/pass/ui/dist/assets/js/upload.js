@@ -26,7 +26,7 @@ layui.use(['upload', 'element', 'layer'], function(){
       ,headers:{token:token}
       ,accept: 'file'
       ,multiple: true
-      ,number: 100
+      ,number: 0
       ,auto: false
       ,bindAction: '#submitAct'
       ,choose: function(obj){  
@@ -67,7 +67,8 @@ layui.use(['upload', 'element', 'layer'], function(){
             tr.find('.act-reload').on('click', function(e){
               var tr_ = e.currentTarget.parentElement.parentElement;
               var index_ = (tr_.id).replace("upload-","");
-              obj.upload(index_, file);
+              //file 为 var 声明的循环变量，闭包内会指向队列最后一项，须按 index 从队列取值
+              obj.upload(index_, that.files[index_]);
             });
             //移除文件
             tr.find('.act-delete').on('click', function(e){
@@ -106,8 +107,8 @@ layui.use(['upload', 'element', 'layer'], function(){
           var that = this;
           var tr = that.elemList.find('tr#upload-'+ index)
           ,tds = tr.children();
-          //显示重传
-          tds.eq(3).find('.file-reload').removeClass('layui-hide'); 
+          //显示重传（按钮类名为 act-reload，原 file-reload 与实际 DOM 不匹配导致按钮始终不显示）
+          tds.eq(3).find('.act-reload').removeClass('layui-hide'); 
       }
       ,progress: function(n, elem, e, index){
         var that = this;

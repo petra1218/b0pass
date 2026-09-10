@@ -181,7 +181,12 @@ func NodeAdd(c *gin.Context) {
 // FileUpload 上传文件
 func FileUpload(c *gin.Context) {
 	RootPath := cleanPath(config.Path)
-	lens, _ := strconv.Atoi(c.Request.Header["Content-Length"][0])
+	//ContentLength 由 net/http 解析后提供；chunked 或 HTTP/2 场景下 Header 中可能不存在 Content-Length 键，
+	//原实现直接下标访问会 panic。此处优先取解析值，缺失时回退读取 Header，仍无法确定则按 0 处理走小文件分支
+	lens := int(c.Request.ContentLength)
+	if lens < 0 {
+		lens, _ = strconv.Atoi(c.Request.Header.Get("Content-Length"))
+	}
 	log.Println("FileUpload::::", lens)
 	f := c.DefaultQuery("f", "/")
 	f = cleanPathJoin(RootPath, f)
