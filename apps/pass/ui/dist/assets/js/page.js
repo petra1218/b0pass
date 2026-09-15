@@ -10,7 +10,7 @@ var auth = localStorage.getItem('auth') || '';
 var $,layer;
 layui.use(['layer'], function(){
     $ = layui.jquery,layer = layui.layer;
-    $(".ver").html('v2.0.8');
+    $(".ver").html('v2.0.9');
 });
 var domid = function(id){ 
     return document.getElementById(id); 

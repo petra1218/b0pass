@@ -117,6 +117,8 @@ layui.use(['layer'], function () {
     state.className = 'ph-state ph-state-' + item.status;
     if (item.status === 'doing') {
       state.textContent = (item.size ? Math.round(item.sent / item.size * 100) : 0) + '%';
+    } else if (item.status === 'wait') {
+      state.textContent = '';   // 等待态只显示灰色小点，减少视觉噪音
     } else {
       state.textContent = STATE_TEXT[item.status];
       if (item.status === 'fail') state.title = item.msg || '';

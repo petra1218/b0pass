@@ -425,7 +425,7 @@ layui.use(['tree', 'table','form','dropdown','util'], function(){
       //照片批量上传按钮
       $("#btn_main_photos").on("click",function(){
           layer.open({
-              title: "照片上传",
+              title: false, //标题由 photos 页内头部承担，避免弹窗标题与页头双标题叠加
               type: 2,
               area: areaBig,
               content: 'photos.html?f='+currPath+"/",
