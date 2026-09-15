@@ -5,6 +5,7 @@
  * 约定：复用 POST /pass/file-upload?f=<相对路径>，header 携带 token；
  *       成功返回 {code:0}，鉴权失败返回 {code:401}（HTTP 状态仍为 200）。
  * 策略：3 并发、每请求 1 张，进度与失败重试均以单张为粒度。
+ *       两个选择入口（相册 / 文件管理器）共用同一入队逻辑。
  */
 layui.use(['layer'], function () {
   var layer = layui.layer;
@@ -30,7 +31,9 @@ layui.use(['layer'], function () {
     grid: document.getElementById('grid'),
     empty: document.getElementById('empty'),
     input: document.getElementById('fileInput'),
+    inputDocs: document.getElementById('fileInputDocs'),      // 文件管理器入口（安卓长按多选兜底）
     btnSelect: document.getElementById('btnSelect'),
+    btnSelectDocs: document.getElementById('btnSelectDocs'),
     btnStart: document.getElementById('btnStart'),
     btnRetry: document.getElementById('btnRetry'),
     btnClose: document.getElementById('btnClose'),
@@ -142,6 +145,12 @@ layui.use(['layer'], function () {
     renderBar(t);
   }
 
+  // 两个选择入口（相册 / 文件管理器）同步显隐；老版本 HTML 没有第二入口时静默跳过
+  function showSelectBtns(show) {
+    el.btnSelect.classList.toggle('hide', !show);
+    if (el.btnSelectDocs) el.btnSelectDocs.classList.toggle('hide', !show);
+  }
+
   function renderBar(t) {
     var pct = t.total ? Math.round(t.sent / t.total * 100) : 0;
 
@@ -150,7 +159,7 @@ layui.use(['layer'], function () {
       el.barProgress.classList.add('hide');
       el.btnStart.classList.add('hide');
       el.btnRetry.classList.add('hide');
-      el.btnSelect.classList.remove('hide');
+      showSelectBtns(true);
       return;
     }
 
@@ -161,14 +170,14 @@ layui.use(['layer'], function () {
       el.barProgress.classList.remove('hide');
       el.barProgressInner.style.width = pct + '%';
       el.btnStart.classList.add('hide');
-      el.btnSelect.classList.add('hide');
+      showSelectBtns(false);
       return;
     }
 
     // 空闲态：待上传与失败重试入口相互独立，避免部分失败后新选照片无法开始上传
     el.barProgress.classList.remove('hide');
     el.barProgressInner.style.width = pct + '%';
-    el.btnSelect.classList.remove('hide');
+    showSelectBtns(true);
 
     if (t.wait > 0) {
       el.btnStart.textContent = '开始上传 ' + t.wait + ' 张';
@@ -196,14 +205,22 @@ layui.use(['layer'], function () {
   }
 
   /* ------------------------------ 选择照片 ------------------------------ */
-  el.btnSelect.onclick = function () { el.input.click(); };
+  // 图片扩展名白名单：华为等机型拍摄的 HEIC/HEIF 可能没有 MIME 类型，只能按扩展名兜底
+  var IMG_EXT = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)$/i;
 
-  el.input.onchange = function () {
-    var files = el.input.files;
+  function isImage(file) {
+    if (file.type && file.type.indexOf('image/') === 0) return true;
+    return IMG_EXT.test(file.name || '');
+  }
+
+  // 两个入口共用：相册（accept=image/*）与文件管理器（无 accept，安卓可长按多选）
+  function handleFiles(files, inputEl) {
     if (!files || !files.length) return;
+    var skipped = 0;
     for (var i = 0; i < files.length; i++) {
       var file = files[i];
-      var item = {
+      if (!isImage(file)) { skipped++; continue; }
+      items.push({
         file: file,
         url: URL.createObjectURL(file),
         status: 'wait',
@@ -211,8 +228,15 @@ layui.use(['layer'], function () {
         size: file.size,
         msg: '',
         node: null
-      };
-      items.push(item);
+      });
+    }
+    inputEl.value = '';                 // 允许再次选择相同文件
+    if (skipped > 0) {
+      layer.msg('已跳过 ' + skipped + ' 个非图片文件', { icon: 0, time: 2500 });
+    }
+    if (!items.length) {                // 本次选择全被过滤：保持空态，不往下渲染
+      renderBar(totals());
+      return;
     }
     var frag = document.createDocumentFragment();
     for (var j = 0; j < items.length; j++) {
@@ -220,10 +244,18 @@ layui.use(['layer'], function () {
     }
     el.grid.appendChild(frag);
     el.empty.classList.add('hide');
-    el.input.value = '';           // 允许再次选择相同文件
     closing = false;
     renderBar(totals());
-  };
+  }
+
+  el.btnSelect.onclick = function () { el.input.click(); };
+  el.input.onchange = function () { handleFiles(el.input.files, el.input); };
+
+  // 文件管理器入口：老版本 HTML 无该节点时静默跳过，不影响相册入口正常工作
+  if (el.btnSelectDocs && el.inputDocs) {
+    el.btnSelectDocs.onclick = function () { el.inputDocs.click(); };
+    el.inputDocs.onchange = function () { handleFiles(el.inputDocs.files, el.inputDocs); };
+  }
 
   /* ------------------------------ 移除单张 ------------------------------ */
   function removeItem(item) {

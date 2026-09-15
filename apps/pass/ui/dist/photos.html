@@ -105,8 +105,9 @@
       background:linear-gradient(90deg,var(--ph-primary),var(--ph-success));
       transition:width .15s linear;
     }
-    .ph-btns{display:flex;gap:8px;}
-    .ph-btns .layui-btn{flex:1;margin:0;height:40px;line-height:40px;border-radius:8px;font-size:14px;}
+    .ph-btns{display:flex;flex-wrap:wrap;gap:8px;}
+    /* 四个按钮同时出现时（两个选择入口 + 重试 + 开始）在窄屏自动换行，避免挤压 */
+    .ph-btns .layui-btn{flex:1;min-width:96px;margin:0;height:40px;line-height:40px;border-radius:8px;font-size:14px;}
     .ph-btns .layui-btn.hide{display:none;}
 
     /* 隐藏的文件输入（避免部分安卓浏览器 display:none 无法触发） */
@@ -140,7 +141,8 @@
 
   <div class="ph-empty" id="empty">
     <span class="ph-empty-ico">🖼</span>
-    点击下方「选择照片」，可一次从相册选中多张<br>建议单次不超过 300 张，避免手机相册卡顿
+    点击下方「选择照片」，可一次从相册选中多张<br>
+    若你的手机相册每次只能选一张，请改用「文件多选」<br>建议单次不超过 300 张，避免手机相册卡顿
   </div>
 
   <div class="ph-grid" id="grid"></div>
@@ -150,12 +152,16 @@
     <div class="ph-progress hide" id="barProgress"><i id="barProgressInner"></i></div>
     <div class="ph-btns">
       <button type="button" class="layui-btn layui-btn-normal" id="btnSelect">选择照片</button>
+      <button type="button" class="layui-btn layui-btn-primary" id="btnSelectDocs">文件多选</button>
       <button type="button" class="layui-btn layui-btn-primary hide" id="btnRetry">重试失败项</button>
       <button type="button" class="layui-btn layui-btn-warm hide" id="btnStart">开始上传</button>
     </div>
   </div>
 
   <input type="file" class="ph-file" id="fileInput" accept="image/*" multiple>
+  <!-- 不带 accept：安卓会路由到系统文件管理器，原生支持长按多选；
+       而 accept="image/*" 会直达相册，部分机型（华为/OPPO/vivo/三星）的相册选择器只回单张 -->
+  <input type="file" class="ph-file" id="fileInputDocs" multiple>
   <audio id="noSleepAudio" loop preload="auto" hidden></audio>
 
   <div class="ph-mask hide" id="wxTip">
@@ -170,7 +176,7 @@
   </div>
 
   <script src="assets/lib/layui/layui.js"></script>
-  <script src="assets/js/photos.js?v2.07"></script>
+  <script src="assets/js/photos.js?v2.08"></script>
 
 </body>
 </html>
